@@ -216,6 +216,8 @@ func (g *GeneradorTalonarios) crearImagenTalonario(talonario Talonario) *image.R
 	anchoBoleta := (g.config.AnchoTalonario - g.config.MargenDerecho - g.config.MargenIzquierdo) / g.config.BoletasPorFila
 	altoBoleta := (g.config.AltoTalonario - g.config.MargenSuperior - g.config.MargenInferior) / filas
 
+	g.dibujarLineaSuperior(img, g.config.MargenIzquierdo, g.config.MargenSuperior, g.config.ColorBorde)
+
 	for i, boleta := range talonario.Boletas {
 		fila := i / g.config.BoletasPorFila
 		columna := i % g.config.BoletasPorFila
@@ -248,22 +250,24 @@ func (g *GeneradorTalonarios) escalarImagen(src image.Image, ancho, alto int) im
 }
 
 func (g *GeneradorTalonarios) dibujarBoleta(img *image.RGBA, boleta Boleta, x, y, ancho, alto int) {
+
+	advance := font.MeasureString(g.config.Fuente, "0")
+	anchoCaracter := advance.Round()
 	bordeColor := g.config.ColorBorde
 	g.dibujarRectangulo(img, x, y, ancho, alto, bordeColor)
-
 	if g.config.OrientacionBoletas == 0 { // Izquierda
-		g.dibujarTexto(img, boleta.Formateado, x+ancho/(20/g.config.BoletasPorFila), y+alto/2, g.config.ColorTexto)
+		g.dibujarTexto(img, boleta.Formateado, x+anchoCaracter, y+alto/2, g.config.ColorTexto)
 	}
 	if g.config.OrientacionBoletas == 1 { // Izquierda
-		g.dibujarTexto(img, boleta.Formateado, x+ancho/2, y+alto/2, g.config.ColorTexto)
+		g.dibujarTexto(img, boleta.Formateado, x+(ancho/2)-anchoCaracter*g.digitosFormato/2, y+alto/2, g.config.ColorTexto)
 	}
 	if g.config.OrientacionBoletas == 2 { // Izquierda
-		g.dibujarTexto(img, boleta.Formateado, x+ancho*19/(20/g.config.BoletasPorFila), y+alto/2, g.config.ColorTexto)
+		g.dibujarTexto(img, boleta.Formateado, x+ancho/g.config.BoletasPorFila-anchoCaracter*(g.digitosFormato+1), y+alto/2, g.config.ColorTexto)
 	}
 }
 
-func (g *GeneradorTalonarios) dibujarRectangulo(img *image.RGBA, x, y, ancho, alto int, col color.RGBA) {
-	for i := range ancho {
+func (g *GeneradorTalonarios) dibujarLineaSuperior(img *image.RGBA, x, y int, col color.RGBA) {
+	for i := range g.config.AnchoTalonario - g.config.MargenIzquierdo - g.config.MargenDerecho {
 		if x+i >= img.Bounds().Max.X {
 			continue
 		}
@@ -271,6 +275,14 @@ func (g *GeneradorTalonarios) dibujarRectangulo(img *image.RGBA, x, y, ancho, al
 			if y+thick < img.Bounds().Max.Y {
 				img.Set(x+i, y+thick, col)
 			}
+		}
+	}
+}
+
+func (g *GeneradorTalonarios) dibujarRectangulo(img *image.RGBA, x, y, ancho, alto int, col color.RGBA) {
+	for i := range ancho {
+		if x+i >= img.Bounds().Max.X {
+			continue
 		}
 		for thick := range g.config.AnchoLineas {
 			if y+alto-1-thick < img.Bounds().Max.Y {
@@ -283,7 +295,6 @@ func (g *GeneradorTalonarios) dibujarRectangulo(img *image.RGBA, x, y, ancho, al
 		if y+i >= img.Bounds().Max.Y {
 			continue
 		}
-		// Línea izquierda
 		for thick := range g.config.AnchoLineas {
 			if x+thick < img.Bounds().Max.X {
 				img.Set(x+thick, y+i, col)
@@ -298,17 +309,13 @@ func (g *GeneradorTalonarios) dibujarRectangulo(img *image.RGBA, x, y, ancho, al
 }
 
 func (g *GeneradorTalonarios) dibujarTexto(img *image.RGBA, texto string, x, y int, col color.RGBA) {
-	advance := font.MeasureString(g.config.Fuente, texto)
-	anchoTexto := advance.Round()
-
-	xCentrado := x - anchoTexto/2
 
 	metrics := g.config.Fuente.Metrics()
 	alturaTexto := metrics.Height.Round()
 	yCentrado := y + alturaTexto/4
 
 	point := fixed.Point26_6{
-		X: fixed.Int26_6(xCentrado * 64),
+		X: fixed.Int26_6(x * 64),
 		Y: fixed.Int26_6(yCentrado * 64),
 	}
 
@@ -364,24 +371,24 @@ func (g *GeneradorTalonarios) GenerarTodos() error {
 
 func main() {
 	config := Config{
-		ImagenBase:         "base.jpeg",
+		ImagenBase:         "Base.png",
 		NumeroMinimo:       0,
-		NumeroMaximo:       999,
+		NumeroMaximo:       9999,
 		BoletasPorPagina:   10,
-		CantidadPaginas:    5,
+		CantidadPaginas:    500,
 		CarpetaSalida:      "talonarios",
-		AnchoTalonario:     900,
-		AltoTalonario:      1600,
-		MargenSuperior:     520,
-		MargenInferior:     230,
+		AnchoTalonario:     1080,
+		AltoTalonario:      1920,
+		MargenSuperior:     610,
+		MargenInferior:     440,
 		MargenIzquierdo:    50,
 		MargenDerecho:      50,
 		BoletasPorFila:     1,
-		AnchoLineas:        2,
-		ColorBorde:         color.RGBA{255, 255, 255, 255},
-		ColorTexto:         color.RGBA{255, 255, 255, 255},
+		AnchoLineas:        5,
+		ColorTexto:         color.RGBA{248, 220, 191, 255},
+		ColorBorde:         color.RGBA{248, 220, 191, 255},
 		RutaFuente:         "calibri-bold.ttf",
-		TamanoFuente:       30.0,
+		TamanoFuente:       38.0,
 		OrientacionBoletas: 0, // 0: izquierda, 1: centro, 2: derecha
 	}
 
